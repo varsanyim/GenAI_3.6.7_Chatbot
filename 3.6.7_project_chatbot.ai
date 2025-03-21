@@ -1,6 +1,12 @@
 import pandas as pd
 import requests
 import json
+import re
+import nltk
+from nltk.tokenize import sent_tokenize, word_tokenize
+
+
+nltk.download('punkt_tab')
 
 TOGETHER_API_KEY = "YOUR API KEY"  # Replace with your Together API key
 
@@ -44,8 +50,22 @@ response = requests.get(WIKI_API_URL)
 wikipedia_data = response.json()
 article_text = wikipedia_data.get("extract", "No article content available.")
 
+# Normalize text
+article_text = article_text.lower()  # Convert to lowercase
+article_text = re.sub(r"[^a-zA-Z0-9\s\.\,]", "", article_text)  # Remove special characters
+# Tokenize sentences
+sentences = sent_tokenize(article_text)
+
+# Ensure at least 20 sentences
+if len(sentences) < 20:
+    sentences = sentences * (20 // len(sentences) + 1)
+    sentences = sentences[:20]  
+
+# Join back into a single cleaned text
+processed_text = " ".join(sentences)
+
 # Load Data into Pandas DataFrame
-df = pd.DataFrame({"text": article_text.split('. ')})  # Splitting into sentences
+df = pd.DataFrame({"text": processed_text.split('. ')})  # Splitting into sentences
 print("Dataset Loaded:")
 for i, row in df.iterrows():
     print(f"{i}: {row['text']}")
@@ -115,7 +135,3 @@ while True:
     bot_response = ask_together_ai(user_input, enhanced_prompt)
     print("Bot:", bot_response)
 
-# Demonstration of Model Performance
-"""
-At the end of this notebook, we compare the answers given by the model before and after customization. The inclusion of Wikipedia data provides more contextually rich and accurate answers, demonstrating the value of dataset selection.
-"""
